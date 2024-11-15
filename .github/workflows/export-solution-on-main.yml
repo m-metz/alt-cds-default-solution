@@ -1,0 +1,25 @@
+name: export-solution-on-main
+# Export solution from DEV environment. Unpack it and prepare, commit and push
+# a git branch with the changes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      # Change this value
+      solution_name:
+        description: 'Name of the solution to worked on from Power Platform.'
+        required: true
+        default: MikeMetzAltCDSDef
+      commit_message:
+        description: 'Commit message to use when commiting the solution. " must be escaped (\")'
+        required: true
+        default: 'Export - DEV Environment'
+permissions:
+  contents: write
+jobs:
+  export-solution-on-main:
+    uses: m-metz/actions/.github/workflows/export-solution-on-main.yml@main
+    with:
+      solution_name: ${{ github.event.inputs.solution_name }}
+      commit_message: ${{ github.event.inputs.commit_message }}
+    secrets: inherit
