@@ -1,0 +1,125 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_gmail": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "crdbf_sharedgmail_49038"
+        },
+        "api": {
+          "name": "shared_gmail"
+        }
+      },
+      "shared_onedrive": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "crdbf_sharedonedrive_d8b2f"
+        },
+        "api": {
+          "name": "shared_onedrive"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_new_email_arrives": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Minute"
+          },
+          "metadata": {
+            "operationMetadataId": "3873c289-a487-42fc-bd4f-84e0a65fc10b"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "fetchOnlyWithAttachments": true,
+              "includeAttachments": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_gmail",
+              "operationId": "OnNewEmail",
+              "connectionName": "shared_gmail"
+            }
+          },
+          "conditions": [
+            {
+              "expression": "@equals(toLower(string(triggerbody()?['SenderName'])), 'john metz')"
+            }
+          ],
+          "description": "Can only use a single From address in this connector, but I used Trigger Conditions to help reduce runs."
+        }
+      },
+      "actions": {
+        "For_each": {
+          "foreach": "@triggerOutputs()?['body/Attachments']",
+          "actions": {
+            "Create_file": {
+              "metadata": {
+                "operationMetadataId": "43994642-94ab-437c-92e2-054e6b402dac"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "folderPath": "/Real Documents/WR Projects/2024-08-07 North Star Exteriors Tech, estimates, drones/Estimates/Handwritten/@{convertFromUtc(utcNow(), 'Mountain Standard Time', 'yyyy-MM-dd')}",
+                  "name": " @{slice(item()?['Name'], 0, -3)}@{convertFromUtc(utcNow(), 'Mountain Standard Time', 'HHmmssf')}.@{slice(item()?['Name'], -3)}",
+                  "body": "@item()?['ContentBytes']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedrive",
+                  "operationId": "CreateFile",
+                  "connectionName": "shared_onedrive"
+                }
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "3f1ba5f1-0f08-4baf-8a34-6ca1b7b7c485"
+          },
+          "type": "Foreach"
+        },
+        "Copy_file_using_path": {
+          "runAfter": {
+            "For_each": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "/Real Documents/WR Projects/2024-08-07 North Star Exteriors Tech, estimates, drones/Estimates/North Star Exteriors Estimate Template.xlsx",
+              "destination": "/Real Documents/WR Projects/2024-08-07 North Star Exteriors Tech, estimates, drones/Estimates/North Star Exteriors Estimate @{convertFromUtc(utcNow(), 'Mountain Standard Time', 'yyyy-MM-dd HHmmss')}.xlsx",
+              "overwrite": false
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedrive",
+              "operationId": "CopyDriveFileByPath",
+              "connectionName": "shared_onedrive"
+            }
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
